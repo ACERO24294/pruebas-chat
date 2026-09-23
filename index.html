@@ -340,14 +340,14 @@ th {
 const URL_GOOGLE_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
 
 let timerSeguimiento;
-let intervalChequeoMovel;
+let intervalChequeoPWA;
 
-const TIEMPO_TOTAL_MS = 1 * 60 * 1000; // 1 Minuto (60,000 ms)
-const TIEMPO_AVISO_MS = 40 * 1000;     // 40 Segundos (40,000 ms)
+const TIEMPO_TOTAL_MS = 1 * 60 * 1000; // 1 Minuto
+const TIEMPO_AVISO_MS = 40 * 1000;     // 40 Segundos
 
 
 /* =========================================================
-   2. CONTROL DE SESIÓN Y EXTRACCIÓN DE USUARIO
+   2. CONTROL DE SESIÓN Y EXTRACCIÓN DE USUARIO (PERSISTENCIA PWA)
    ========================================================= */
 function extraerUsuarioDesdeEmail(emailOUser) {
   if (!emailOUser || typeof emailOUser !== "string") return "";
@@ -364,14 +364,17 @@ function simularLogin() {
   
   if (email !== "" && pass !== "") {
     const usuarioLimpio = extraerUsuarioDesdeEmail(email);
-    sessionStorage.setItem("nombreUsuario", usuarioLimpio);
+    
+    // GUARDADO EN LOCALSTORAGE PARA PERSISTENCIA EN PWA
+    localStorage.setItem("nombreUsuarioPWA", usuarioLimpio);
+    localStorage.setItem("sesionActivaPWA", "true");
 
     if (typeof firebase !== "undefined" && firebase.auth()) {
       firebase.auth().signInWithEmailAndPassword(email, pass)
         .then((userCredential) => {
           const user = userCredential.user;
           if (user && user.email) {
-            sessionStorage.setItem("nombreUsuario", extraerUsuarioDesdeEmail(user.email));
+            localStorage.setItem("nombreUsuarioPWA", extraerUsuarioDesdeEmail(user.email));
           }
           iniciarTransicionPWA();
         })
@@ -404,9 +407,11 @@ function iniciarTransicionPWA() {
 
 function cerrarSesionExpirada() {
   ocultarModalAdvertencia();
-  localStorage.removeItem("lastActiveTime");
+  localStorage.removeItem("lastActiveTimePWA");
+  localStorage.removeItem("sesionActivaPWA");
+  localStorage.removeItem("nombreUsuarioPWA");
   sessionStorage.clear();
-  clearInterval(intervalChequeoMovel);
+  clearInterval(intervalChequeoPWA);
   
   alert("Tu sesión ha expirado por inactividad. Por favor, ingresa de nuevo.");
   
@@ -420,17 +425,26 @@ function cerrarSesionExpirada() {
   }
 }
 
+function cerrarSesionManual() {
+  localStorage.clear();
+  sessionStorage.clear();
+  location.reload();
+}
+
 
 /* =========================================================
-   3. TEMPORIZADOR DE INACTIVIDAD COMPATIBLE CON MÓVIL
+   3. TEMPORIZADOR DE INACTIVIDAD ROBUSTO PARA PWA
    ========================================================= */
 function registrarActividad() {
-  localStorage.setItem("lastActiveTime", Date.now().toString());
+  localStorage.setItem("lastActiveTimePWA", Date.now().toString());
   ocultarModalAdvertencia();
 }
 
 function evaluarEstadoInactividad() {
-  const ultimaActividadStr = localStorage.getItem("lastActiveTime");
+  const esSesionActiva = localStorage.getItem("sesionActivaPWA");
+  if (!esSesionActiva) return;
+
+  const ultimaActividadStr = localStorage.getItem("lastActiveTimePWA");
   if (!ultimaActividadStr) return;
 
   const ultimaActividad = parseInt(ultimaActividadStr, 10);
@@ -451,7 +465,7 @@ function mostrarModalAdvertencia() {
     modal = document.createElement("div");
     modal.id = "modal-expiracion";
     modal.innerHTML = `
-      <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 99999; padding: 20px;">
+      <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 99999; padding: 20px;">
         <div style="background: white; padding: 25px 20px; border-radius: 20px; max-width: 320px; width: 100%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
           <h3 style="margin-top:0; color: #1e293b; font-size: 20px;">¿Sigues ahí?</h3>
           <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Tu sesión se cerrará pronto por falta de actividad.</p>
@@ -477,11 +491,9 @@ function ocultarModalAdvertencia() {
 function iniciarMonitoreoInactividad() {
   registrarActividad();
 
-  // Eventos para detectar interacción del usuario
   const eventos = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'touchend'];
   eventos.forEach(evento => {
     window.addEventListener(evento, () => {
-      // Solo actualiza la actividad si no tiene la modal abierta
       const modal = document.getElementById("modal-expiracion");
       if (!modal || modal.style.display === "none") {
         registrarActividad();
@@ -489,16 +501,24 @@ function iniciarMonitoreoInactividad() {
     }, true);
   });
 
-  // Revisa cada segundo el estado (soluciona el bloqueo de setTimeout en celulares)
-  if (intervalChequeoMovel) clearInterval(intervalChequeoMovel);
-  intervalChequeoMovel = setInterval(evaluarEstadoInactividad, 1000);
+  if (intervalChequeoPWA) clearInterval(intervalChequeoPWA);
+  intervalChequeoPWA = setInterval(evaluarEstadoInactividad, 1000);
 }
 
-// Evalúa inmediatamente al volver a la pantalla en celular
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
+// RESTAURAR SESIÓN SI YA ESTABA LOGUEADO AL ABRIR LA PWA
+window.addEventListener('load', () => {
+  const sesion = localStorage.getItem("sesionActivaPWA");
+  if (sesion === "true") {
+    iniciarTransicionPWA();
     evaluarEstadoInactividad();
   }
+});
+
+// EVENTOS DE ENFOQUE Y VISIBILIDAD PARA MÓVILES PWA
+['visibilitychange', 'focus', 'pageshow'].forEach(evt => {
+  window.addEventListener(evt, () => {
+    evaluarEstadoInactividad();
+  });
 });
 
 
@@ -506,21 +526,12 @@ document.addEventListener("visibilitychange", () => {
    4. REGISTRO EN GOOGLE SHEETS
    ========================================================= */
 async function registrarEnGoogleSheets(mensajeCliente, respuestaBot) {
-  let nombreUsuario = sessionStorage.getItem("nombreUsuario");
-
-  if ((!nombreUsuario || nombreUsuario === "invitado") && typeof firebase !== "undefined" && firebase.auth()) {
-    const currentUser = firebase.auth().currentUser;
-    if (currentUser && currentUser.email) {
-      nombreUsuario = extraerUsuarioDesdeEmail(currentUser.email);
-      sessionStorage.setItem("nombreUsuario", nombreUsuario);
-    }
-  }
+  let nombreUsuario = localStorage.getItem("nombreUsuarioPWA");
 
   if (!nombreUsuario || nombreUsuario === "invitado") {
     const inputEmail = document.getElementById('loginEmail');
     if (inputEmail && inputEmail.value) {
       nombreUsuario = extraerUsuarioDesdeEmail(inputEmail.value);
-      if (nombreUsuario) sessionStorage.setItem("nombreUsuario", nombreUsuario);
     }
   }
 
@@ -540,9 +551,9 @@ async function registrarEnGoogleSheets(mensajeCliente, respuestaBot) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString()
     });
-    console.log("Consulta registrada para el usuario:", nombreUsuario);
+    console.log("Consulta registrada para PWA:", nombreUsuario);
   } catch (error) {
-    console.error("Error al enviar registro:", error);
+    console.error("Error al enviar registro desde PWA:", error);
   }
 }
 
@@ -603,7 +614,7 @@ function procesarEntradaUsuario(valor) {
 
 
 /* =========================================================
-   6. MONITORES DE EVENTOS
+   6. MONITORES DE EVENTOS DE CHAT
    ========================================================= */
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
