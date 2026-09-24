@@ -383,7 +383,6 @@ async function guardarInteraccionEnSheet(pregunta, respuesta) {
         respuestaBot: respuesta
     };
 
-    // ⚠️ REEMPLAZA CON LA URL DE TU APPS SCRIPT
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
 
     try {
@@ -412,11 +411,12 @@ function obtenerDespedidaFinal() {
 }
 
 // 3. Función para escribir mensajes en el Chat
-function botEscribeMensaje(texto) {
+function botEscribeMensaje(texto, esSistema = false) {
     const container = document.querySelector('.chat-messages');
     if (!container) return;
     const msgDiv = document.createElement('div');
-    msgDiv.className = 'message bot-message';
+    // Si es del sistema (seguimiento o despedida) agregamos una clase para no ciclar el observer
+    msgDiv.className = esSistema ? 'message bot-message bot-sistema' : 'message bot-message';
     msgDiv.innerHTML = texto;
     container.appendChild(msgDiv);
     container.scrollTop = container.scrollHeight;
@@ -428,7 +428,7 @@ function activarSeguimientoGlobal() {
     clearTimeout(timerInactividad);
 
     timerSeguimiento = setTimeout(() => {
-        botEscribeMensaje("¿Hay algo más en lo que te pueda servir? 😊");
+        botEscribeMensaje("¿Hay algo más en lo que te pueda servir? 😊", true);
     }, 40000);
 }
 
@@ -445,7 +445,7 @@ function procesarEntradaUsuario(valor) {
         clearTimeout(timerSeguimiento);
         clearTimeout(timerInactividad);
         
-        setTimeout(() => botEscribeMensaje(obtenerDespedidaFinal()), 600);
+        setTimeout(() => botEscribeMensaje(obtenerDespedidaFinal(), true), 600);
         return true;
     }
     
@@ -458,22 +458,20 @@ function procesarEntradaUsuario(valor) {
 function mostrarBienvenida() {
     const chatContainer = document.querySelector('.chat-messages');
     if (chatContainer && chatContainer.children.length === 0) {
-        botEscribeMensaje("¡Hola! 👋 Bienvenido al Asistente de Créditos Solidarios de KOCO ACREIMEX. ¿En qué puedo ayudarte hoy?");
+        botEscribeMensaje("¡Hola! 👋 Bienvenido al Asistente de Créditos Solidarios de KOCO ACREIMEX. ¿En qué puedo ayudarte hoy?", true);
     }
 }
 
-/* --- MONITORES DE EVENTOS Y OBSERVADOR --- */
+/* --- MONITORES DE EVENTOS Y OBSERVADOR (CORREGIDO Y SIN BUCLES) --- */
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
-            if (node.classList && node.classList.contains('bot-message')) {
+            if (node.nodeType === 1 && node.classList.contains('bot-message')) {
+                // Si es mensaje de seguimiento o despedida del sistema, no lo registramos en Sheets
+                if (node.classList.contains('bot-sistema')) return;
+
                 const textoBot = node.innerText || "";
-
-                const esSeguimiento = textoBot.includes("¿Hay algo más");
-                const esDespedida = textoBot.includes("Gracias por") || textoBot.includes("gusto atenderte") || textoBot.includes("bendecido dia") || textoBot.includes("bendecido día");
-                const esBienvenida = textoBot.includes("Bienvenido al Asistente");
-
-                if (!esSeguimiento && !esDespedida && !esBienvenida) {
+                if (textoBot.trim() !== "") {
                     const preguntaEnviar = ultimaPreguntaUsuario || "Consulta directa";
                     guardarInteraccionEnSheet(preguntaEnviar, textoBot);
                     activarSeguimientoGlobal();
@@ -490,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(chatContainer, { childList: true });
     }
 
-    // Mostrar el mensaje de bienvenida en cuanto carga la pantalla
+    // Mostrar el mensaje de bienvenida
     mostrarBienvenida();
 
     const btn = document.querySelector('.send-btn');
@@ -499,7 +497,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn && input) {
         const manejarEnvio = () => {
             const valor = input.value;
-            procesarEntradaUsuario(valor);
+            if (valor.trim() !== "") {
+                procesarEntradaUsuario(valor);
+            }
         };
 
         btn.addEventListener('click', manejarEnvio);
