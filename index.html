@@ -358,10 +358,17 @@ th {
 /* --- SISTEMA GLOBAL DE SEGUIMIENTO, DESPEDIDA Y REGISTRO EN GOOGLE SHEETS KOCO --- */
 let timerSeguimiento;
 let timerInactividad;
+let ultimaPreguntaUsuario = "";
 
-// 1. FUNCIÓN PARA ENVIAR INTERACCIÓN A GOOGLE SHEETS (PASO 3)
+// Configuración de estilo/tema
+const defaultConfig = {
+    background_color: "#0052CC",
+    secondary_surface_color: "#FFFFFF",
+    text_color: "#1f2937"
+};
+
+// 1. FUNCIÓN PARA ENVIAR INTERACCIÓN A GOOGLE SHEETS
 async function guardarInteraccionEnSheet(pregunta, respuesta) {
-    // Intentar obtener el usuario de Firebase Auth
     let correoUsuario = "Sin Sesión";
     if (window.auth && window.auth.currentUser) {
         correoUsuario = window.auth.currentUser.email;
@@ -376,13 +383,13 @@ async function guardarInteraccionEnSheet(pregunta, respuesta) {
         respuestaBot: respuesta
     };
 
-    // ⚠️ REEMPLAZA CON LA URL QUE TE DIO APPS SCRIPT AL IMPLEMENTAR (PASO 2)
+    // ⚠️ REEMPLAZA CON LA URL DE TU APPS SCRIPT
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
 
     try {
         await fetch(WEB_APP_URL, {
             method: "POST",
-            mode: "no-cors", // Evita errores CORS en PWA y móviles
+            mode: "no-cors",
             headers: {
                 "Content-Type": "application/json"
             },
@@ -394,9 +401,6 @@ async function guardarInteraccionEnSheet(pregunta, respuesta) {
     }
 }
 
-// Variable temporal para recordar la última pregunta realizada por el usuario
-let ultimaPreguntaUsuario = "";
-
 // 2. Motor de Mensajes Aleatorios por Horario
 function obtenerDespedidaFinal() {
     const h = new Date().getHours();
@@ -407,10 +411,10 @@ function obtenerDespedidaFinal() {
     return messages[Math.floor(Math.random() * messages.length)];
 }
 
-// 3. Función de Inyección de Mensajes (Bot)
+// 3. Función para escribir mensajes en el Chat
 function botEscribeMensaje(texto) {
     const container = document.querySelector('.chat-messages');
-    if(!container) return;
+    if (!container) return;
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message bot-message';
     msgDiv.innerHTML = texto;
@@ -418,22 +422,21 @@ function botEscribeMensaje(texto) {
     container.scrollTop = container.scrollHeight;
 }
 
-// 4. Activador de Seguimiento (Pregunta "¿Algo más?")
+// 4. Activador de Seguimiento ("¿Hay algo más...?")
 function activarSeguimientoGlobal() {
     clearTimeout(timerSeguimiento);
     clearTimeout(timerInactividad);
 
     timerSeguimiento = setTimeout(() => {
         botEscribeMensaje("¿Hay algo más en lo que te pueda servir? 😊");
-    }, 40000); // 40 segundos después de cualquier respuesta del bot
+    }, 40000);
 }
 
-// 5. Interceptor de Respuestas del Usuario (Detección de "No/Gracias")
+// 5. Interceptor de Respuestas del Usuario
 function procesarEntradaUsuario(valor) {
     const lower = valor.toLowerCase().trim();
     if (!lower) return false;
 
-    // Guardar la pregunta en la variable global para usarla cuando responda el bot
     ultimaPreguntaUsuario = valor;
 
     const despedidas = ["no", "gracias", "nada", "ninguna", "n", "todo bien", "adios", "eso es todo", "no gracias"];
@@ -442,36 +445,37 @@ function procesarEntradaUsuario(valor) {
         clearTimeout(timerSeguimiento);
         clearTimeout(timerInactividad);
         
-        // Despedida inmediata con leve retraso natural
         setTimeout(() => botEscribeMensaje(obtenerDespedidaFinal()), 600);
-        return true; // Es una despedida
+        return true;
     }
     
-    // Si no es despedida, limpiamos timers para esperar la nueva respuesta del bot
     clearTimeout(timerSeguimiento);
     clearTimeout(timerInactividad);
     return false; 
 }
 
-/* --- MONITORES DE EVENTOS --- */
+// 6. MENSAJE DE BIENVENIDA INICIAL
+function mostrarBienvenida() {
+    const chatContainer = document.querySelector('.chat-messages');
+    if (chatContainer && chatContainer.children.length === 0) {
+        botEscribeMensaje("¡Hola! 👋 Bienvenido al Asistente de Créditos Solidarios de KOCO ACREIMEX. ¿En qué puedo ayudarte hoy?");
+    }
+}
 
-// Vigilante de Mensajes del Bot (MutationObserver)
+/* --- MONITORES DE EVENTOS Y OBSERVADOR --- */
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
             if (node.classList && node.classList.contains('bot-message')) {
                 const textoBot = node.innerText || "";
 
-                // Evitar que el bot reaccione a sus propias preguntas de seguimiento o despedidas
                 const esSeguimiento = textoBot.includes("¿Hay algo más");
                 const esDespedida = textoBot.includes("Gracias por") || textoBot.includes("gusto atenderte") || textoBot.includes("bendecido dia") || textoBot.includes("bendecido día");
+                const esBienvenida = textoBot.includes("Bienvenido al Asistente");
 
-                if (!esSeguimiento && !esDespedida) {
-                    // AQUÍ REGISTRAMOS LA INTERACCIÓN EN GOOGLE SHEETS
+                if (!esSeguimiento && !esDespedida && !esBienvenida) {
                     const preguntaEnviar = ultimaPreguntaUsuario || "Consulta directa";
                     guardarInteraccionEnSheet(preguntaEnviar, textoBot);
-
-                    // Reiniciar el contador de seguimiento
                     activarSeguimientoGlobal();
                 }
             }
@@ -479,11 +483,16 @@ const observer = new MutationObserver((mutations) => {
     });
 });
 
-const chatContainer = document.querySelector('.chat-messages');
-if (chatContainer) observer.observe(chatContainer, { childList: true });
-
-// Listeners de Interfaz (Click y Enter)
+// Inicialización de Listeners al cargar la ventana
 document.addEventListener('DOMContentLoaded', () => {
+    const chatContainer = document.querySelector('.chat-messages');
+    if (chatContainer) {
+        observer.observe(chatContainer, { childList: true });
+    }
+
+    // Mostrar el mensaje de bienvenida en cuanto carga la pantalla
+    mostrarBienvenida();
+
     const btn = document.querySelector('.send-btn');
     const input = document.querySelector('.chat-input');
 
