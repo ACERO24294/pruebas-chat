@@ -1,11 +1,15 @@
-const CACHE_VERSION = "v6";
+const CACHE_VERSION = "v7";
 const CACHE_NAME = `acreimex-chat-${CACHE_VERSION}`;
 
+// Nombre exacto de tu subcarpeta en GitHub Pages
+const BASE_PATH = "/pruebas-chat";
+
 const STATIC_ASSETS = [
-  "/ACREIMEX-CHAT/",
-  "/ACREIMEX-CHAT/index.html",
-  "/ACREIMEX-CHAT/icon-192.png",
-  "/ACREIMEX-CHAT/icon-512.png"
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/index.html`,
+  `${BASE_PATH}/icon-192.png`,
+  `${BASE_PATH}/icon-512.png`,
+  `${BASE_PATH}/manifest.json`
 ];
 
 // INSTALL
@@ -43,11 +47,11 @@ self.addEventListener("fetch", event => {
 
   event.respondWith(
     fetch(event.request)
-      .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, clone);
-        });
+      .then(async response => {
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(event.request, response.clone());
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
