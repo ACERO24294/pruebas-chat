@@ -355,149 +355,75 @@ th {
     }
 </script>
 <script>
-/* --- SISTEMA GLOBAL DE SEGUIMIENTO, DESPEDIDA Y REGISTRO EN GOOGLE SHEETS KOCO --- */
+/* --- SISTEMA GLOBAL DE SEGUIMIENTO Y DESPEDIDA KOCO --- */
 let timerSeguimiento;
 let timerInactividad;
-let ultimaPreguntaUsuario = "";
 
-// 1. REGISTRO COMPATIBLE CON PWA Y SIN CONEXIÓN
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
-const PENDIENTES_SHEET_KEY = "koco_pendientes_google_sheets_v1";
-
-function leerPendientesSheet() {
-    try { return JSON.parse(localStorage.getItem(PENDIENTES_SHEET_KEY) || "[]"); }
-    catch (_) { return []; }
-}
-
-function escribirPendientesSheet(pendientes) {
-    try { localStorage.setItem(PENDIENTES_SHEET_KEY, JSON.stringify(pendientes.slice(-100))); }
-    catch (error) { console.error("No se pudo guardar la cola local:", error); }
-}
-
-async function enviarInteraccionSheet(payload) {
-    await fetch(WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        // Evita que el navegador/PWA deje la petición esperando indefinidamente.
-        keepalive: true
-    });
-}
-
-async function sincronizarPendientesSheet() {
-    if (!navigator.onLine) return;
-    const pendientes = leerPendientesSheet();
-    if (!pendientes.length) return;
-
-    const restantes = [];
-    for (const payload of pendientes) {
-        try {
-            await enviarInteraccionSheet(payload);
-        } catch (error) {
-            restantes.push(payload);
-        }
-    }
-    escribirPendientesSheet(restantes);
-}
-
-async function guardarInteraccionEnSheet(pregunta, respuesta) {
-    let correoUsuario = "Sin Sesión";
-    if (window.auth && window.auth.currentUser) {
-        correoUsuario = window.auth.currentUser.email || "Sin correo";
-    }
-
-    const payload = {
-        fechaHoraLegible: new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" }),
-        nombreUsuario: correoUsuario,
-        mensajeUsuario: pregunta,
-        respuestaBot: respuesta
-    };
-
-    // Primero se guarda localmente: así la PWA no pierde mensajes sin internet.
-    const pendientes = leerPendientesSheet();
-    pendientes.push(payload);
-    escribirPendientesSheet(pendientes);
-    await sincronizarPendientesSheet();
-}
-
-window.addEventListener("online", sincronizarPendientesSheet);
-window.addEventListener("pageshow", sincronizarPendientesSheet);
-
-// 2. Motor de Mensajes Aleatorios por Horario
+// 1. Motor de Mensajes Aleatorios por Horario
 function obtenerDespedidaFinal() {
     const h = new Date().getHours();
-    const morning = ["🌅 Fue un gusto atenderte, que tengas un bendecido día 🤝"];
-    const afternoon = ["☀️ Fue un gusto atenderte, que tengas un bendecido día 🤝"];
-    const night = ["🌙 Fue un gusto atenderte, que tengas un bendecido día 🤝"];
+    const morning = ["🌅 Fue un gusto atenderte,que  tengas  un bendecido dia🤝"];
+    const afternoon = ["☀️ Fue un gusto atenderte,que  tengas  un  bendecido dia 🤝"];
+    const night = ["🌙Fue un gusto atenderte,que  tengas un  bendecido dia 🤝"];
     let messages = (h >= 6 && h < 12) ? morning : (h >= 12 && h < 18) ? afternoon : night;
     return messages[Math.floor(Math.random() * messages.length)];
 }
 
-// 3. Función para escribir mensajes en el Chat
-function botEscribeMensaje(texto, esSistema = false) {
+// 2. Función de Inyección de Mensajes (Bot)
+function botEscribeMensaje(texto) {
     const container = document.querySelector('.chat-messages');
-    if (!container) return;
+    if(!container) return;
     const msgDiv = document.createElement('div');
-    // Si es del sistema (seguimiento o despedida) agregamos una clase para no ciclar el observer
-    msgDiv.className = esSistema ? 'message bot-message bot-sistema' : 'message bot-message';
+    msgDiv.className = 'message bot-message';
     msgDiv.innerHTML = texto;
     container.appendChild(msgDiv);
     container.scrollTop = container.scrollHeight;
 }
 
-// 4. Activador de Seguimiento ("¿Hay algo más...?")
+// 3. Activador de Seguimiento (Pregunta "¿Algo más?")
 function activarSeguimientoGlobal() {
     clearTimeout(timerSeguimiento);
     clearTimeout(timerInactividad);
 
     timerSeguimiento = setTimeout(() => {
-        botEscribeMensaje("¿Hay algo más en lo que te pueda servir? 😊", true);
-    }, 40000);
+        botEscribeMensaje("¿Hay algo más en lo que te pueda servir? 😊");
+
+    }, 40000); // 40 segundos después de cualquier respuesta del bot
 }
 
-// 5. Interceptor de Respuestas del Usuario
+// 4. Interceptor de Respuestas del Usuario (Detección de "No/Gracias")
 function procesarEntradaUsuario(valor) {
     const lower = valor.toLowerCase().trim();
-    if (!lower) return false;
-
-    ultimaPreguntaUsuario = valor;
-
     const despedidas = ["no", "gracias", "nada", "ninguna", "n", "todo bien", "adios", "eso es todo", "no gracias"];
 
     if (despedidas.some(neg => lower === neg || lower.includes(neg))) {
         clearTimeout(timerSeguimiento);
         clearTimeout(timerInactividad);
         
-        setTimeout(() => botEscribeMensaje(obtenerDespedidaFinal(), true), 600);
-        return true;
+        // Despedida inmediata con leve retraso natural
+        setTimeout(() => botEscribeMensaje(obtenerDespedidaFinal()), 600);
+        return true; // Es una despedida
     }
     
+    // Si no es despedida, limpiamos timers para esperar la nueva respuesta del bot
     clearTimeout(timerSeguimiento);
     clearTimeout(timerInactividad);
     return false; 
 }
 
-// 6. MENSAJE DE BIENVENIDA INICIAL
-function mostrarBienvenida() {
-    const chatContainer = document.querySelector('.chat-messages');
-    if (chatContainer && chatContainer.children.length === 0) {
-        botEscribeMensaje("¡Hola! 👋 Bienvenido al Asistente de Créditos Solidarios de KOCO ACREIMEX. ¿En qué puedo ayudarte hoy?", true);
-    }
-}
+/* --- MONITORES DE EVENTOS --- */
 
-/* --- MONITORES DE EVENTOS Y OBSERVADOR (CORREGIDO Y SIN BUCLES) --- */
+// Vigilante de Mensajes del Bot (MutationObserver)
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === 1 && node.classList.contains('bot-message')) {
-                // Si es mensaje de seguimiento o despedida del sistema, no lo registramos en Sheets
-                if (node.classList.contains('bot-sistema')) return;
+            if (node.classList && node.classList.contains('bot-message')) {
+                const texto = node.innerText || "";
+                // Evitar que el bot reaccione a sus propias preguntas de seguimiento o despedidas
+                const esSeguimiento = texto.includes("¿Hay algo más");
+                const esDespedida = texto.includes("Gracias por") || texto.includes("gusto ayudarte") || texto.includes("buen día") || texto.includes("buena tarde") || texto.includes("noches");
 
-                const textoBot = node.innerText || "";
-                // No guardar mensajes de bienvenida ni respuestas sin pregunta.
-                if (textoBot.trim() !== "" && ultimaPreguntaUsuario.trim() !== "") {
-                    guardarInteraccionEnSheet(ultimaPreguntaUsuario, textoBot);
+                if (!esSeguimiento && !esDespedida) {
                     activarSeguimientoGlobal();
                 }
             }
@@ -505,25 +431,18 @@ const observer = new MutationObserver((mutations) => {
     });
 });
 
-// Inicialización de Listeners al cargar la ventana
+const chatContainer = document.querySelector('.chat-messages');
+if (chatContainer) observer.observe(chatContainer, { childList: true });
+
+// Listeners de Interfaz (Click y Enter)
 document.addEventListener('DOMContentLoaded', () => {
-    const chatContainer = document.querySelector('.chat-messages');
-    if (chatContainer) {
-        observer.observe(chatContainer, { childList: true });
-    }
-
-    // Mostrar el mensaje de bienvenida
-    mostrarBienvenida();
-
     const btn = document.querySelector('.send-btn');
     const input = document.querySelector('.chat-input');
 
     if (btn && input) {
         const manejarEnvio = () => {
             const valor = input.value;
-            if (valor.trim() !== "") {
-                procesarEntradaUsuario(valor);
-            }
+            procesarEntradaUsuario(valor);
         };
 
         btn.addEventListener('click', manejarEnvio);
@@ -533,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+</body>
 <script>
     const defaultConfig = {
       background_color: "#0052CC",
@@ -1088,7 +1008,7 @@ container.appendChild(mainTitle);
       <tbody>
         <tr><td style="${cellStyle}">$150,000,001 - $350,000,000</td><td style="${cellStyle}">$200.00</td></tr>
         <tr><td style="${cellStyle}">$350,000,000.01 - $600,000,000</td><td style="${cellStyle}">$650.00</td></tr>
-        <tr><td style="${cellStyle}">Mayor a $600,000,001</td><td style="${cellStyle}">$1,000,000.00</td></tr>
+        <tr><td style="${cellStyle}">Mayor a $600,000,001</td><td style="${cellStyle}">$1,000.00</td></tr>
       </tbody>
     </table>
   `));
@@ -2950,19 +2870,17 @@ if (keywords.coordinacion.some(kw => lower.includes(kw))) {
       const message = input.value.trim();
       
       if (!message) return;
-
-      // Dejamos disponible la pregunta para que el observador la guarde
-      // junto con la respuesta correspondiente en Google Sheets.
-      ultimaPreguntaUsuario = message;
-      procesarEntradaUsuario(message);
-      registrarActividadSesion();
       
       addMessage(message, true);
       input.value = "";
       
       setTimeout(() => {
         const response = getResponse(message);
-        addMessage(response.content, false);
+        if (response.type === 'text') {
+          addMessage(response.content, false);
+        } else {
+          addMessage(response.content, false);
+        }
       }, 500);
     }
 
@@ -3812,6 +3730,7 @@ if (window.elementSdk) {
   });
 }
 
+  </script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
   import { 
@@ -3834,75 +3753,26 @@ if (window.elementSdk) {
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  // Exponer la sesión para los scripts normales y para el guardado en Sheets.
-  window.auth = auth;
 
   let timerAlerta;
   let timerCierre;
-  let ultimaActividad = 0;
-  let alertaMostrada = false;
+  let horaMinimizado = null;
 
-  // Tiempos de inactividad en milisegundos: aviso a los 55 segundos y cierre al minuto.
-  const TIEMPO_ALERTA = 55 * 1000;
-  const TIEMPO_CIERRE = 60 * 1000;
+  // TIEMPOS EN MILISEGUNDOS
+  const TIEMPO_ALERTA = 55 * 1000; // 55(sef) MINUTOS
+  const TIEMPO_CIERRE = 1 * 60 * 1000; // 1(min)60 MINUTOS
 
   function limpiarTemporizadores() {
     if (timerAlerta) clearTimeout(timerAlerta);
     if (timerCierre) clearTimeout(timerCierre);
-    timerAlerta = null;
-    timerCierre = null;
-    ultimaActividad = 0;
-    alertaMostrada = false;
+    horaMinimizado = null;
   }
-
-  function iniciarTemporizadorInactividad() {
-    limpiarTemporizadores();
-    ultimaActividad = Date.now();
-
-    timerAlerta = setTimeout(() => {
-      if (auth.currentUser && !alertaMostrada) {
-        alertaMostrada = true;
-        alert("Aviso: tu sesión se cerrará en 5 segundos por inactividad.");
-      }
-    }, TIEMPO_ALERTA);
-
-    timerCierre = setTimeout(() => {
-      if (auth.currentUser && Date.now() - ultimaActividad >= TIEMPO_CIERRE) {
-        signOut(auth).then(() => {
-          alert("Tu sesión se cerró por 1 minuto de inactividad.");
-        });
-      }
-    }, TIEMPO_CIERRE);
-  }
-
-  // Se considera actividad cualquier interacción normal con la aplicación.
-  function registrarActividadSesion() {
-    if (auth.currentUser) iniciarTemporizadorInactividad();
-  }
-
-  ["click", "keydown", "mousemove", "touchstart", "scroll"].forEach((evento) => {
-    document.addEventListener(evento, registrarActividadSesion, { passive: true });
-  });
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && auth.currentUser) {
-      sincronizarPendientesSheet();
-      const inactividad = Date.now() - ultimaActividad;
-      if (inactividad >= TIEMPO_CIERRE) {
-        signOut(auth);
-      } else if (inactividad >= TIEMPO_ALERTA && !alertaMostrada) {
-        alertaMostrada = true;
-        alert("Aviso: tu sesión se cerrará en 5 segundos por inactividad.");
-      }
-    }
-  });
 
   // CONTROL DE ACCESO
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('pantalla-login').style.display = 'none';
       document.getElementById('contenido-pwa').style.display = 'block';
-      iniciarTemporizadorInactividad();
     } else {
       document.getElementById('pantalla-login').style.display = 'flex';
       document.getElementById('contenido-pwa').style.display = 'none';
@@ -3910,28 +3780,75 @@ if (window.elementSdk) {
     }
   });
 
-  // BOTÓN LOGUEAR
-  document.getElementById('btnEntrar').onclick = () => {
-    const email = document.getElementById('loginEmail').value;
-    const pass = document.getElementById('loginPass').value;
+  // DETECTAR SEGUNDO PLANO
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      horaMinimizado = Date.now();
 
-    if (!email || !pass) {
-      alert("POR FAVOR COMPLETA LOS CAMPOS");
-      return;
+      // ALERTA A LOS 55 MINUTOS
+      timerAlerta = setTimeout(() => {
+        if (auth.currentUser) {
+          console.log("SE ALCANZÓ EL TIEMPO LÍMITE DE ESPERA.");
+        }
+      }, TIEMPO_ALERTA);
+
+      // CIERRE A LOS 60 MINUTOS
+      timerCierre = setTimeout(() => {
+        if (auth.currentUser) {
+          signOut(auth).then(() => {
+            console.log("SESIÓN CERRADA POR INACTIVIDAD.");
+          });
+        }
+      }, TIEMPO_CIERRE);
+
+    } else if (document.visibilityState === "visible") {
+      if (horaMinimizado && auth.currentUser) {
+        const tiempoInactivo = Date.now() - horaMinimizado;
+
+        // SI PASARON ENTRE 55 Y 60 MINUTOS
+        if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
+          limpiarTemporizadores();
+          const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
+          
+          if (!deseaContinuar) {
+            signOut(auth).then(() => console.log("SESIÓN CERRADA POR EL USUARIO."));
+          }
+        } else if (tiempoInactivo < TIEMPO_ALERTA) {
+          // SI REGRESÓ ANTES DE LOS 55 MINUTOS, REINICIA LOS CONTADORES
+          limpiarTemporizadores();
+        }
+      }
     }
+  });
 
-    setPersistence(auth, browserSessionPersistence)
-      .then(() => {
-        return signInWithEmailAndPassword(auth, email, pass);
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("ACCESO DENEGADO. VERIFICA TUS CREDENCIALES.");
-      });
-  };
+  // BOTÓN LOGUEAR
+  const btnEntrar = document.getElementById('btnEntrar');
+  if (btnEntrar) {
+    btnEntrar.onclick = () => {
+      const email = document.getElementById('loginEmail').value;
+      const pass = document.getElementById('loginPass').value;
+
+      if (!email || !pass) {
+        alert("POR FAVOR COMPLETA LOS CAMPOS");
+        return;
+      }
+
+      setPersistence(auth, browserSessionPersistence)
+        .then(() => {
+          return signInWithEmailAndPassword(auth, email, pass);
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("ACCESO DENEGADO. VERIFICA TUS CREDENCIALES.");
+        });
+    };
+  }
 
   // BOTÓN SALIR
-  document.getElementById('btnSalir').onclick = () => signOut(auth);
+  const btnSalir = document.getElementById('btnSalir');
+  if (btnSalir) {
+    btnSalir.onclick = () => signOut(auth);
+  }
 </script>
 
 <script>
@@ -3993,7 +3910,36 @@ if ("serviceWorker" in navigator) {
     }
   });
 }
+
+// ENLACE DIRECTO DEL BOTÓN ENVIAR E INPUT
+document.addEventListener("DOMContentLoaded", () => {
+  const sendBtn = document.getElementById("sendBtn");
+  const messageInput = document.getElementById("messageInput");
+
+  function ejecutarEnvio() {
+    if (typeof sendMessage === "function") {
+      sendMessage();
+    } else if (typeof enviarMensaje === "function") {
+      enviarMensaje();
+    }
+  }
+
+  if (sendBtn) {
+    sendBtn.addEventListener("click", ejecutarEnvio);
+  }
+
+  if (messageInput) {
+    messageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        ejecutarEnvio();
+      }
+    });
+  }
+});
 </script>
 <script src="app.js"></script>
+
 </body>
 </html>
+
