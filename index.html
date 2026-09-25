@@ -360,20 +360,51 @@ let timerSeguimiento;
 let timerInactividad;
 let ultimaPreguntaUsuario = "";
 
-// Configuración de estilo/tema
-const defaultConfig = {
-    background_color: "#0052CC",
-    secondary_surface_color: "#FFFFFF",
-    text_color: "#1f2937"
-};
+// 1. REGISTRO COMPATIBLE CON PWA Y SIN CONEXIÓN
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
+const PENDIENTES_SHEET_KEY = "koco_pendientes_google_sheets_v1";
 
-// 1. FUNCIÓN PARA ENVIAR INTERACCIÓN A GOOGLE SHEETS
+function leerPendientesSheet() {
+    try { return JSON.parse(localStorage.getItem(PENDIENTES_SHEET_KEY) || "[]"); }
+    catch (_) { return []; }
+}
+
+function escribirPendientesSheet(pendientes) {
+    try { localStorage.setItem(PENDIENTES_SHEET_KEY, JSON.stringify(pendientes.slice(-100))); }
+    catch (error) { console.error("No se pudo guardar la cola local:", error); }
+}
+
+async function enviarInteraccionSheet(payload) {
+    await fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        // Evita que el navegador/PWA deje la petición esperando indefinidamente.
+        keepalive: true
+    });
+}
+
+async function sincronizarPendientesSheet() {
+    if (!navigator.onLine) return;
+    const pendientes = leerPendientesSheet();
+    if (!pendientes.length) return;
+
+    const restantes = [];
+    for (const payload of pendientes) {
+        try {
+            await enviarInteraccionSheet(payload);
+        } catch (error) {
+            restantes.push(payload);
+        }
+    }
+    escribirPendientesSheet(restantes);
+}
+
 async function guardarInteraccionEnSheet(pregunta, respuesta) {
     let correoUsuario = "Sin Sesión";
     if (window.auth && window.auth.currentUser) {
-        correoUsuario = window.auth.currentUser.email;
-    } else if (typeof auth !== 'undefined' && auth.currentUser) {
-        correoUsuario = auth.currentUser.email;
+        correoUsuario = window.auth.currentUser.email || "Sin correo";
     }
 
     const payload = {
@@ -383,22 +414,15 @@ async function guardarInteraccionEnSheet(pregunta, respuesta) {
         respuestaBot: respuesta
     };
 
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykHzrsXrbwSfq5h2q7KlE-zsqamE0f8LcO-mqdV3QlF6jcWUXtMEh2n8rKgBhaohHE/exec";
-
-    try {
-        await fetch(WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-        console.log("INTERACCIÓN REGISTRADA EN GOOGLE SHEETS.");
-    } catch (error) {
-        console.error("ERROR AL GUARDAR EN GOOGLE SHEETS:", error);
-    }
+    // Primero se guarda localmente: así la PWA no pierde mensajes sin internet.
+    const pendientes = leerPendientesSheet();
+    pendientes.push(payload);
+    escribirPendientesSheet(pendientes);
+    await sincronizarPendientesSheet();
 }
+
+window.addEventListener("online", sincronizarPendientesSheet);
+window.addEventListener("pageshow", sincronizarPendientesSheet);
 
 // 2. Motor de Mensajes Aleatorios por Horario
 function obtenerDespedidaFinal() {
@@ -471,9 +495,9 @@ const observer = new MutationObserver((mutations) => {
                 if (node.classList.contains('bot-sistema')) return;
 
                 const textoBot = node.innerText || "";
-                if (textoBot.trim() !== "") {
-                    const preguntaEnviar = ultimaPreguntaUsuario || "Consulta directa";
-                    guardarInteraccionEnSheet(preguntaEnviar, textoBot);
+                // No guardar mensajes de bienvenida ni respuestas sin pregunta.
+                if (textoBot.trim() !== "" && ultimaPreguntaUsuario.trim() !== "") {
+                    guardarInteraccionEnSheet(ultimaPreguntaUsuario, textoBot);
                     activarSeguimientoGlobal();
                 }
             }
@@ -2926,17 +2950,19 @@ if (keywords.coordinacion.some(kw => lower.includes(kw))) {
       const message = input.value.trim();
       
       if (!message) return;
+
+      // Dejamos disponible la pregunta para que el observador la guarde
+      // junto con la respuesta correspondiente en Google Sheets.
+      ultimaPreguntaUsuario = message;
+      procesarEntradaUsuario(message);
+      registrarActividadSesion();
       
       addMessage(message, true);
       input.value = "";
       
       setTimeout(() => {
         const response = getResponse(message);
-        if (response.type === 'text') {
-          addMessage(response.content, false);
-        } else {
-          addMessage(response.content, false);
-        }
+        addMessage(response.content, false);
       }, 500);
     }
 
@@ -3808,71 +3834,79 @@ if (window.elementSdk) {
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  // Exponer la sesión para los scripts normales y para el guardado en Sheets.
+  window.auth = auth;
 
   let timerAlerta;
   let timerCierre;
-  let horaMinimizado = null;
+  let ultimaActividad = 0;
+  let alertaMostrada = false;
 
-  // TIEMPOS EN MILISEGUNDOS
-  const TIEMPO_ALERTA = 55* 1000; // 55(sef) MINUTOS
-  const TIEMPO_CIERRE = 1 * 60 * 1000; // 1(min)60 MINUTOS
+  // Tiempos de inactividad en milisegundos: aviso a los 55 segundos y cierre al minuto.
+  const TIEMPO_ALERTA = 55 * 1000;
+  const TIEMPO_CIERRE = 60 * 1000;
 
   function limpiarTemporizadores() {
     if (timerAlerta) clearTimeout(timerAlerta);
     if (timerCierre) clearTimeout(timerCierre);
-    horaMinimizado = null;
+    timerAlerta = null;
+    timerCierre = null;
+    ultimaActividad = 0;
+    alertaMostrada = false;
   }
+
+  function iniciarTemporizadorInactividad() {
+    limpiarTemporizadores();
+    ultimaActividad = Date.now();
+
+    timerAlerta = setTimeout(() => {
+      if (auth.currentUser && !alertaMostrada) {
+        alertaMostrada = true;
+        alert("Aviso: tu sesión se cerrará en 5 segundos por inactividad.");
+      }
+    }, TIEMPO_ALERTA);
+
+    timerCierre = setTimeout(() => {
+      if (auth.currentUser && Date.now() - ultimaActividad >= TIEMPO_CIERRE) {
+        signOut(auth).then(() => {
+          alert("Tu sesión se cerró por 1 minuto de inactividad.");
+        });
+      }
+    }, TIEMPO_CIERRE);
+  }
+
+  // Se considera actividad cualquier interacción normal con la aplicación.
+  function registrarActividadSesion() {
+    if (auth.currentUser) iniciarTemporizadorInactividad();
+  }
+
+  ["click", "keydown", "mousemove", "touchstart", "scroll"].forEach((evento) => {
+    document.addEventListener(evento, registrarActividadSesion, { passive: true });
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && auth.currentUser) {
+      sincronizarPendientesSheet();
+      const inactividad = Date.now() - ultimaActividad;
+      if (inactividad >= TIEMPO_CIERRE) {
+        signOut(auth);
+      } else if (inactividad >= TIEMPO_ALERTA && !alertaMostrada) {
+        alertaMostrada = true;
+        alert("Aviso: tu sesión se cerrará en 5 segundos por inactividad.");
+      }
+    }
+  });
 
   // CONTROL DE ACCESO
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('pantalla-login').style.display = 'none';
       document.getElementById('contenido-pwa').style.display = 'block';
+      iniciarTemporizadorInactividad();
     } else {
       document.getElementById('pantalla-login').style.display = 'flex';
       document.getElementById('contenido-pwa').style.display = 'none';
       limpiarTemporizadores();
-    }
-  });
-
-  // DETECTAR SEGUNDO PLANO
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      horaMinimizado = Date.now();
-
-      // ALERTA A LOS 55 MINUTOS
-      timerAlerta = setTimeout(() => {
-        if (auth.currentUser) {
-          console.log("SE ALCANZÓ EL TIEMPO LÍMITE DE ESPERA.");
-        }
-      }, TIEMPO_ALERTA);
-
-      // CIERRE A LOS 60 MINUTOS
-      timerCierre = setTimeout(() => {
-        if (auth.currentUser) {
-          signOut(auth).then(() => {
-            console.log("SESIÓN CERRADA POR INACTIVIDAD.");
-          });
-        }
-      }, TIEMPO_CIERRE);
-
-    } else if (document.visibilityState === "visible") {
-      if (horaMinimizado && auth.currentUser) {
-        const tiempoInactivo = Date.now() - horaMinimizado;
-
-        // SI PASARON ENTRE 55 Y 60 MINUTOS
-        if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
-          limpiarTemporizadores();
-          const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
-          
-          if (!deseaContinuar) {
-            signOut(auth).then(() => console.log("SESIÓN CERRADA POR EL USUARIO."));
-          }
-        } else if (tiempoInactivo < TIEMPO_ALERTA) {
-          // SI REGRESÓ ANTES DE LOS 55 MINUTOS, REINICIA LOS CONTADORES
-          limpiarTemporizadores();
-        }
-      }
     }
   });
 
@@ -3900,7 +3934,6 @@ if (window.elementSdk) {
   document.getElementById('btnSalir').onclick = () => signOut(auth);
 </script>
 
-<script>
 <script>
 if ("serviceWorker" in navigator) {
   // Usamos "./sw.js" para que busque el archivo sw.js en la carpeta actual
