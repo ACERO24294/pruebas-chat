@@ -3758,10 +3758,10 @@ if (window.elementSdk) {
   let timerCierre;
   let horaMinimizado = null;
 
- // TIEMPOS EN MILISEGUNDOS
-  const TIEMPO_ALERTA = 55 * 60 * 1000; // 55 minutos (3,300,000 ms)
-  const TIEMPO_CIERRE = 60 * 60 * 1000; // 1 hora completa (3,600,000 ms)
-
+// TIEMPOS EN MILISEGUNDOS
+const TIEMPO_ALERTA = (11 * 60 + 55) * 60 * 1000; // 11 horas y 55 minutos (42,900,000 ms)
+const TIEMPO_CIERRE = 12 * 60 * 60 * 1000;         // 12 horas completas (43,200,000 ms)
+	
   function limpiarTemporizadores() {
     if (timerAlerta) clearTimeout(timerAlerta);
     if (timerCierre) clearTimeout(timerCierre);
@@ -3805,7 +3805,7 @@ if (window.elementSdk) {
       if (horaMinimizado && auth.currentUser) {
         const tiempoInactivo = Date.now() - horaMinimizado;
 
-        // SI PASARON ENTRE 55 Y 60 MINUTOS
+        // SI PASARON ENTRE 715 Y 720 MINUTOS
         if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
           limpiarTemporizadores();
           const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
@@ -3814,7 +3814,7 @@ if (window.elementSdk) {
             signOut(auth).then(() => console.log("SESIÓN CERRADA POR EL USUARIO."));
           }
         } else if (tiempoInactivo < TIEMPO_ALERTA) {
-          // SI REGRESÓ ANTES DE LOS 55 MINUTOS, REINICIA LOS CONTADORES
+          // SI REGRESÓ ANTES DE LOS 715 MINUTOS, REINICIA LOS CONTADORES
           limpiarTemporizadores();
         }
       }
