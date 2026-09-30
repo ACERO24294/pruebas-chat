@@ -3025,79 +3025,55 @@ if (keywords.coordinacion.some(kw => lower.includes(kw))) {
       }
     };
 
-    const montosPor1000 = {
-      poder:{
-        16:{periodicidad:"semanal",monto:67.65},
-        8:{periodicidad:"catorcenal",monto:135.90},
-        "8_q":{periodicidad:"quincenal",monto:136.70},
-        20:{periodicidad:"semanal",monto:55.10},
-        10:{periodicidad:"catorcenal",monto:110.65},
-        "10_q":{periodicidad:"quincenal",monto:111.40},
-        24:{periodicidad:"semanal",monto:46.70},
-        12:{periodicidad:"catorcenal",monto:93.85},
-        "12_q":{periodicidad:"quincenal",monto:94.60}
-      },
-      mixto:{
-        16:{periodicidad:"semanal",monto:68.41},
-        8:{periodicidad:"catorcenal",monto:137.39},
-        "8_q":{periodicidad:"quincenal",monto:138.27},
-        20:{periodicidad:"semanal",monto:55.78},
-        10:{periodicidad:"catorcenal",monto:112.11},
-        "10_q":{periodicidad:"quincenal",monto:112.98},
-        24:{periodicidad:"semanal",monto:47.40},
-        12:{periodicidad:"catorcenal",monto:95.26},
-        "12_q":{periodicidad:"quincenal",monto:96.11}
-      },
-      preferente:{
-        16:{periodicidad:"semanal",monto:65.28},
-        8:{periodicidad:"catorcenal",monto:112.96},
-        "8_q":{periodicidad:"quincenal",monto:113.75},
-        20:{periodicidad:"semanal",monto:45.88},
-        10:{periodicidad:"catorcenal",monto:92.20},
-        "10_q":{periodicidad:"quincenal",monto:92.98},
-        24:{periodicidad:"semanal",monto:39.02},
-        12:{periodicidad:"catorcenal",monto:78.35},
-        "12_q":{periodicidad:"quincenal",monto:79.11}
-      },
-      impulso:{
-        16:{periodicidad:"semanal",monto:68.41},
-        8:{periodicidad:"catorcenal",monto:137.39},
-        "8_q":{periodicidad:"quincenal",monto:138.27},
-        20:{periodicidad:"semanal",monto:55.78},
-        10:{periodicidad:"catorcenal",monto:112.11},
-        "10_q":{periodicidad:"quincenal",monto:112.98},
-        24:{periodicidad:"semanal",monto:47.40},
-        12:{periodicidad:"catorcenal",monto:95.26},
-        "12_q":{periodicidad:"quincenal",monto:96.11}
-      },
-
-	adicional: {
-    6: { periodicidad: "mensual", monto: 185.63 },
-    7: { periodicidad: "mensual", monto: 161.50 },
-    8: { periodicidad: "mensual", monto: 143.44 },
-    9: { periodicidad: "mensual", monto: 129.43 },
-    10: { periodicidad: "mensual", monto: 118.20 },
-    11: { periodicidad: "mensual", monto: 109.10 },
-    12: { periodicidad: "mensual", monto: 101.40 },
-    13: { periodicidad: "mensual", monto: 94.96 },
-    14: { periodicidad: "mensual", monto: 89.45 },
-    15: { periodicidad: "mensual", monto: 85.64 },
-    16: { periodicidad: "mensual", monto: 80.53 },
-    17: { periodicidad: "mensual", monto: 76.87 },
-    18: { periodicidad: "mensual", monto: 73.60 }
+const montosPor1000 = {
+  // Tasa 48% (Mixto, Impulso, Consumo, etc.)
+  48: {
+    semanal:    { 16: 68.41, 20: 55.88, 24: 47.54 },
+    catorcenal: { 8: 137.48, 10: 112.29, 12: 95.52, 14: 83.57 },
+    quincenal:  { 8: 138.40, 10: 113.20, 12: 96.43 }
   },
-      consumo:{
-        16:{periodicidad:"semanal",monto:68.41},
-        8:{periodicidad:"catorcenal",monto:137.39},
-        "8_q":{periodicidad:"quincenal",monto:138.27},
-        20:{periodicidad:"semanal",monto:55.78},
-        10:{periodicidad:"catorcenal",monto:112.11},
-        "10_q":{periodicidad:"quincenal",monto:112.98},
-        24:{periodicidad:"semanal",monto:47.40},
-        12:{periodicidad:"catorcenal",monto:95.26},
-        "12_q":{periodicidad:"quincenal",monto:96.11}
-      }
-    };
+
+  // Tasa 42% (Poder de Mujer Ciclos 1 y 2, etc.)
+  42: {
+    semanal:    { 16: 67.65, 20: 55.12, 24: 46.78 },
+    catorcenal: { 8: 135.89, 10: 110.71, 12: 93.95, 14: 81.99 },
+    quincenal:  { 8: 136.69, 10: 111.50, 12: 94.73 }
+  },
+
+  // Tasa 36% (Poder de Mujer Ciclos 3 y 4, etc.)
+  36: {
+    semanal:    { 16: 64.20, 20: 52.30, 24: 44.10, 28: 38.50, 32: 34.20, 36: 31.00, 40: 28.50 },
+    catorcenal: { 8: 129.10, 10: 105.20, 12: 89.10, 14: 77.80, 16: 69.40, 18: 62.80, 20: 57.50 },
+    quincenal:  { 8: 129.80, 10: 105.90, 12: 89.80, 14: 78.40, 16: 70.00, 18: 63.30, 20: 58.00 }
+  },
+
+  // Tasa 33% (Poder de Mujer Ciclos 5 y 6, etc.)
+  33: {
+    semanal:    { 16: 62.50, 20: 50.80, 24: 42.80, 28: 37.20, 32: 33.00, 36: 29.80, 40: 27.30 },
+    catorcenal: { 8: 125.80, 10: 102.40, 12: 86.60, 14: 75.50, 16: 67.20, 18: 60.80, 20: 55.60 },
+    quincenal:  { 8: 126.50, 10: 103.10, 12: 87.20, 14: 76.10, 16: 67.80, 18: 61.30, 20: 56.10 }
+  },
+
+  // Tasa 30% (Poder de Mujer Ciclos 7 y 8, etc.)
+  30: {
+    semanal:    { 16: 60.80, 20: 49.30, 24: 41.50, 28: 36.00, 32: 31.80, 36: 28.70, 40: 26.20 },
+    catorcenal: { 8: 122.50, 10: 99.60, 12: 84.20, 14: 73.30, 16: 65.10, 18: 58.80, 20: 53.80 },
+    quincenal:  { 8: 123.10, 10: 100.20, 12: 84.80, 14: 73.90, 16: 65.60, 18: 59.30, 20: 54.20 }
+  },
+
+  // Tasa 24% (Preferente / Tasas preferenciales)
+  24: {
+    semanal:    { 16: 57.30, 20: 46.30, 24: 38.80, 28: 33.50, 32: 29.50, 36: 26.40, 40: 24.00 },
+    catorcenal: { 8: 115.80, 10: 93.90, 12: 79.20, 14: 68.80, 16: 61.00, 18: 54.90, 20: 50.10 },
+    quincenal:  { 8: 116.40, 10: 94.50, 12: 79.80, 14: 69.30, 16: 61.50, 18: 55.40, 20: 50.50 }
+  },
+
+  // Casos Mensuales (ej. Crédito Adicional)
+  mensual: {
+    6: 185.63, 7: 161.50, 8: 143.44, 9: 129.43, 10: 118.20, 11: 109.10,
+    12: 101.40, 13: 94.96, 14: 89.45, 15: 85.64, 16: 80.53, 17: 76.87, 18: 73.60
+  }
+};    
 
 function llenarCiclos(prodKey) {
   const sel = $('ciclo');
@@ -3729,6 +3705,7 @@ if (window.elementSdk) {
     ])
   });
 }
+
 
   </script>
 <script type="module">
