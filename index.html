@@ -3025,47 +3025,47 @@ if (keywords.coordinacion.some(kw => lower.includes(kw))) {
       }
     };
 
-const montosPor1000 = {
-  // Tasa 48% (Mixto, Impulso, Consumo, etc.)
+    const montosPor1000 = {
+  // Tasa 48% ()
   48: {
     semanal:    { 16: 68.41, 20: 55.88, 24: 47.54 },
     catorcenal: { 8: 137.48, 10: 112.29, 12: 95.52, 14: 83.57 },
     quincenal:  { 8: 138.40, 10: 113.20, 12: 96.43 }
   },
 
-  // Tasa 42% (Poder de Mujer Ciclos 1 y 2, etc.)
+  // Tasa 42% ()
   42: {
     semanal:    { 16: 67.65, 20: 55.12, 24: 46.78 },
     catorcenal: { 8: 135.89, 10: 110.71, 12: 93.95, 14: 81.99 },
     quincenal:  { 8: 136.69, 10: 111.50, 12: 94.73 }
   },
 
-  // Tasa 36% (Poder de Mujer Ciclos 3 y 4, etc.)
+  // Tasa 36% ()
   36: {
-    semanal:    { 16: 64.20, 20: 52.30, 24: 44.10, 28: 38.50, 32: 34.20, 36: 31.00, 40: 28.50 },
-    catorcenal: { 8: 129.10, 10: 105.20, 12: 89.10, 14: 77.80, 16: 69.40, 18: 62.80, 20: 57.50 },
-    quincenal:  { 8: 129.80, 10: 105.90, 12: 89.80, 14: 78.40, 16: 70.00, 18: 63.30, 20: 58.00 }
+    semanal:    { 16: 66.90, 20: 54.37, 24: 46.03, 28: 40.07, 32: 35.61, 40: 29.38 },
+    catorcenal: { 8: 134.31, 10: 109.15, 12: 92.39, 14: 80.43, 20: 58.96 },
+    quincenal:  { 8: 134.98, 10: 109.82, 12: 93.06, 14: 81.10, 20: 59.63 }
   },
 
-  // Tasa 33% (Poder de Mujer Ciclos 5 y 6, etc.)
+  // Tasa 33% ()
   33: {
-    semanal:    { 16: 62.50, 20: 50.80, 24: 42.80, 28: 37.20, 32: 33.00, 36: 29.80, 40: 27.30 },
-    catorcenal: { 8: 125.80, 10: 102.40, 12: 86.60, 14: 75.50, 16: 67.20, 18: 60.80, 20: 55.60 },
-    quincenal:  { 8: 126.50, 10: 103.10, 12: 87.20, 14: 76.10, 16: 67.80, 18: 61.30, 20: 56.10 }
+    semanal:    { 16: 66.53, 20: 54.00, 24: 45.65, 28: 39.70, 32: 35.23,  40: 29.00 },
+    catorcenal: { 8: 133.52, 10: 108.37, 12: 91.62, 20: 58.18 },
+    quincenal:  { 8: 134.14, 10: 108.98, 12: 92.22, 14: 80.27, 20: 58.79 }
   },
 
-  // Tasa 30% (Poder de Mujer Ciclos 7 y 8, etc.)
+  // Tasa 30% ()
   30: {
-    semanal:    { 16: 60.80, 20: 49.30, 24: 41.50, 28: 36.00, 32: 31.80, 36: 28.70, 40: 26.20 },
-    catorcenal: { 8: 122.50, 10: 99.60, 12: 84.20, 14: 73.30, 16: 65.10, 18: 58.80, 20: 53.80 },
-    quincenal:  { 8: 123.10, 10: 100.20, 12: 84.80, 14: 73.90, 16: 65.60, 18: 59.30, 20: 54.20 }
+    semanal:    { 16: 66.16, 20: 53.63, 24: 45.28, 28: 39.32, 32: 34.86, 40: 28.62 },
+    catorcenal: { 8: 132.73, 10: 107.59, 12: 90.84, 14: 78.89, 20: 57.41 },
+    quincenal:  { 8: 133.39, 10: 108.15, 12: 91.39, 14: 79.44, 20: 57.96 }
   },
 
-  // Tasa 24% (Preferente / Tasas preferenciales)
+  // Tasa 24% ()
   24: {
-    semanal:    { 16: 57.30, 20: 46.30, 24: 38.80, 28: 33.50, 32: 29.50, 36: 26.40, 40: 24.00 },
-    catorcenal: { 8: 115.80, 10: 93.90, 12: 79.20, 14: 68.80, 16: 61.00, 18: 54.90, 20: 50.10 },
-    quincenal:  { 8: 116.40, 10: 94.50, 12: 79.80, 14: 69.30, 16: 61.50, 18: 55.40, 20: 50.50 }
+    semanal:    { 16: 65.41, 20: 52.89, 24: 44.54, 28: 38.59, 32: 39.12, 40: 27.87 },
+    catorcenal: { 8: 131.17, 10: 106.05, 12: 89.31, 14: 77.36, 20: 55.88 },
+    quincenal:  { 8: 131.61, 10: 106.49, 12: 89.75, 14: 77.80, 20: 56.31 }
   },
 
   // Casos Mensuales (ej. Crédito Adicional)
@@ -3073,7 +3073,7 @@ const montosPor1000 = {
     6: 185.63, 7: 161.50, 8: 143.44, 9: 129.43, 10: 118.20, 11: 109.10,
     12: 101.40, 13: 94.96, 14: 89.45, 15: 85.64, 16: 80.53, 17: 76.87, 18: 73.60
   }
-};    
+};  
 
 function llenarCiclos(prodKey) {
   const sel = $('ciclo');
@@ -3709,166 +3709,173 @@ if (window.elementSdk) {
 
   </script>
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-  import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    onAuthStateChanged, 
-    signOut, 
-    setPersistence, 
-    browserSessionPersistence 
-  } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut, 
+  setPersistence, 
+  browserSessionPersistence 
+} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAA8pgcb4RWWcA7stNmqnrAgfpgTZnlo_c",
-    authDomain: "chat-solidario.firebaseapp.com",
-    projectId: "chat-solidario",
-    storageBucket: "chat-solidario.firebasestorage.app",
-    messagingSenderId: "135166703419",
-    appId: "1:135166703419:web:a68dd015787ee60894a91e"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAA8pgcb4RWWcA7stNmqnrAgfpgTZnlo_c",
+  authDomain: "chat-solidario.firebaseapp.com",
+  projectId: "chat-solidario",
+  storageBucket: "chat-solidario.firebasestorage.app",
+  messagingSenderId: "135166703419",
+  appId: "1:135166703419:web:a68dd015787ee60894a91e"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  let timerAlerta;
-  let timerCierre;
-  let horaMinimizado = null;
-
-// TIEMPOS EN MILISEGUNDOS
-const TIEMPO_ALERTA = (11 * 60 + 55) * 60 * 1000; // 11 horas y 55 minutos (42,900,000 ms)
-const TIEMPO_CIERRE = 12 * 60 * 60 * 1000;         // 12 horas completas (43,200,000 ms)
-	
-  function limpiarTemporizadores() {
-    if (timerAlerta) clearTimeout(timerAlerta);
-    if (timerCierre) clearTimeout(timerCierre);
-    horaMinimizado = null;
+// FUNCIÓN AUXILIAR DE REGISTRO DENTRO DEL MÓDULO (CORRECTO)
+async function registrarEventoSesion(tipoEvento, usuarioEmail, motivo = "Manual") {
+  try {
+    await addDoc(collection(db, "registros_sesion"), {
+      usuario: usuarioEmail,
+      evento: tipoEvento,
+      motivo: motivo,
+      fecha: serverTimestamp(),
+      navegador: navigator.userAgent,
+      plataforma: navigator.platform
+    });
+    console.log(`Evento '${tipoEvento}' registrado exitosamente.`);
+  } catch (error) {
+    console.error("Error al registrar evento de sesión:", error);
   }
+}
 
-  // CONTROL DE ACCESO
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      document.getElementById('pantalla-login').style.display = 'none';
-      document.getElementById('contenido-pwa').style.display = 'block';
-    } else {
-      document.getElementById('pantalla-login').style.display = 'flex';
-      document.getElementById('contenido-pwa').style.display = 'none';
-      limpiarTemporizadores();
-    }
-  });
+let timerAlerta;
+let timerCierre;
+let horaMinimizado = null;
 
-  // DETECTAR SEGUNDO PLANO
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      horaMinimizado = Date.now();
+const TIEMPO_ALERTA = (11 * 60 + 55) * 60 * 1000; 
+const TIEMPO_CIERRE = 12 * 60 * 60 * 1000;         
+	
+function limpiarTemporizadores() {
+  if (timerAlerta) clearTimeout(timerAlerta);
+  if (timerCierre) clearTimeout(timerCierre);
+  horaMinimizado = null;
+}
 
-      // ALERTA A LOS 55 MINUTOS
-      timerAlerta = setTimeout(() => {
-        if (auth.currentUser) {
-          console.log("SE ALCANZÓ EL TIEMPO LÍMITE DE ESPERA.");
-        }
-      }, TIEMPO_ALERTA);
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('pantalla-login').style.display = 'none';
+    document.getElementById('contenido-pwa').style.display = 'block';
+  } else {
+    document.getElementById('pantalla-login').style.display = 'flex';
+    document.getElementById('contenido-pwa').style.display = 'none';
+    limpiarTemporizadores();
+  }
+});
 
-      // CIERRE A LOS 60 MINUTOS
-      timerCierre = setTimeout(() => {
-        if (auth.currentUser) {
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    horaMinimizado = Date.now();
+
+    timerAlerta = setTimeout(() => {
+      if (auth.currentUser) {
+        console.log("SE ALCANZÓ EL TIEMPO LÍMITE DE ESPERA.");
+      }
+    }, TIEMPO_ALERTA);
+
+    timerCierre = setTimeout(() => {
+      if (auth.currentUser) {
+        const userEmail = auth.currentUser.email;
+        registrarEventoSesion("cierre_sesion", userEmail, "Inactividad 12 horas").then(() => {
           signOut(auth).then(() => {
             console.log("SESIÓN CERRADA POR INACTIVIDAD.");
           });
-        }
-      }, TIEMPO_CIERRE);
+        });
+      }
+    }, TIEMPO_CIERRE);
 
-    } else if (document.visibilityState === "visible") {
-      if (horaMinimizado && auth.currentUser) {
-        const tiempoInactivo = Date.now() - horaMinimizado;
+  } else if (document.visibilityState === "visible") {
+    if (horaMinimizado && auth.currentUser) {
+      const tiempoInactivo = Date.now() - horaMinimizado;
 
-        // SI PASARON ENTRE 715 Y 720 MINUTOS
-        if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
-          limpiarTemporizadores();
-          const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
-          
-          if (!deseaContinuar) {
+      if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
+        limpiarTemporizadores();
+        const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
+        if (!deseaContinuar) {
+          const userEmail = auth.currentUser.email;
+          registrarEventoSesion("cierre_sesion", userEmail, "Cierre por aviso de inactividad").then(() => {
             signOut(auth).then(() => console.log("SESIÓN CERRADA POR EL USUARIO."));
-          }
-        } else if (tiempoInactivo < TIEMPO_ALERTA) {
-          // SI REGRESÓ ANTES DE LOS 715 MINUTOS, REINICIA LOS CONTADORES
-          limpiarTemporizadores();
+          });
         }
+      } else if (tiempoInactivo < TIEMPO_ALERTA) {
+        limpiarTemporizadores();
       }
     }
-  });
-
-  // BOTÓN LOGUEAR
-  const btnEntrar = document.getElementById('btnEntrar');
-  if (btnEntrar) {
-    btnEntrar.onclick = () => {
-      const email = document.getElementById('loginEmail').value;
-      const pass = document.getElementById('loginPass').value;
-
-      if (!email || !pass) {
-        alert("POR FAVOR COMPLETA LOS CAMPOS");
-        return;
-      }
-
-      setPersistence(auth, browserSessionPersistence)
-        .then(() => {
-          return signInWithEmailAndPassword(auth, email, pass);
-        })
-        .catch((err) => {
-          console.error(err);
-          alert("ACCESO DENEGADO. VERIFICA TUS CREDENCIALES.");
-        });
-    };
   }
+});
 
-  // BOTÓN SALIR
-  const btnSalir = document.getElementById('btnSalir');
-  if (btnSalir) {
-    btnSalir.onclick = () => signOut(auth);
-  }
+const btnEntrar = document.getElementById('btnEntrar');
+if (btnEntrar) {
+  btnEntrar.onclick = () => {
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPass').value;
+
+    if (!email || !pass) {
+      alert("POR FAVOR COMPLETA LOS CAMPOS");
+      return;
+    }
+
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        return signInWithEmailAndPassword(auth, email, pass);
+      })
+      .then((userCredential) => {
+        registrarEventoSesion("inicio_sesion", userCredential.user.email, "Inicio manual");
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("ACCESO DENEGADO. VERIFICA TUS CREDENCIALES.");
+      });
+  };
+}
+
+const btnSalir = document.getElementById('btnSalir');
+if (btnSalir) {
+  btnSalir.onclick = () => {
+    if (auth.currentUser) {
+      const userEmail = auth.currentUser.email;
+      registrarEventoSesion("cierre_sesion", userEmail, "Boton Salir").then(() => {
+        signOut(auth);
+      });
+    } else {
+      signOut(auth);
+    }
+  };
+}
 </script>
 
 <script>
 if ("serviceWorker" in navigator) {
-  // Usamos "./sw.js" para que busque el archivo sw.js en la carpeta actual
   navigator.serviceWorker.register("./sw.js")
     .then(registration => {
-
       registration.onupdatefound = () => {
         const newWorker = registration.installing;
-
         newWorker.onstatechange = () => {
           if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-
             const updateBanner = document.createElement("div");
             updateBanner.innerHTML = `
-              <div style="
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #0f172a;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 12px;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-                z-index: 9999;
-                font-family: sans-serif;
-              ">
+              <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 9999; font-family: sans-serif;">
                 🔄 Nueva versión disponible
-                <button id="updateBtn" style="
-                  margin-left: 15px;
-                  padding: 6px 12px;
-                  border: none;
-                  background: #22c55e;
-                  color: white;
-                  border-radius: 8px;
-                  cursor: pointer;
-                ">Actualizar</button>
+                <button id="updateBtn" style="margin-left: 15px; padding: 6px 12px; border: none; background: #22c55e; color: white; border-radius: 8px; cursor: pointer;">Actualizar</button>
               </div>
             `;
             document.body.appendChild(updateBanner);
-
             document.getElementById("updateBtn").addEventListener("click", () => {
               window.location.reload();
             });
@@ -3878,7 +3885,6 @@ if ("serviceWorker" in navigator) {
     })
     .catch(err => console.error("Error al registrar el Service Worker:", err));
 
-  // Recarga automática de la pestaña al activarse un nuevo Service Worker
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!refreshing) {
@@ -3888,7 +3894,6 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// ENLACE DIRECTO DEL BOTÓN ENVIAR E INPUT
 document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("sendBtn");
   const messageInput = document.getElementById("messageInput");
