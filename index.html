@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
@@ -271,6 +272,25 @@ th {
       cursor: pointer;
     }
 
+    .btn-exportar-admin {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,.2);
+    }
+
+    .btn-exportar-admin:hover {
+      background: #15803d;
+    }
+
     .footer {
       text-align: center;
       font-size: 10px;
@@ -294,7 +314,7 @@ th {
     <div style="height: 10px;"></div>
     <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
     
-    <button class="btn-entrar" id="btnEntrar" onclick="simularLogin()">Iniciar Sesión</button>
+    <button class="btn-entrar" id="btnEntrar" type="button" onclick="iniciarSesionFirebase(event)">Iniciar Sesión</button>
     <p style="margin-top: 25px; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">
       Sistema propiedad de Créditos Solidarios
     </p>
@@ -311,8 +331,11 @@ th {
 
         </div>
 
-        <div class="header-right">
-          <button class="btn-salir" id="btnSalir" onclick="location.reload()">Salir</button>
+	        <div class="header-right">
+	          <button class="btn-salir" id="btnSalir" type="button">Salir</button>
+		<button id="btn-exportar-admin" style="display: none;" class="btn-exportar-admin" onclick="exportarRegistrosExcel(event)">
+	    📥 Exportar inicio de sesión 
+	</button>
           <div class="quote-container">
              <p id="frase-imponente">
                💖🤝 Tu trabajo abre oportunidades donde antes solo había sueños. 🌱💫
@@ -2884,13 +2907,6 @@ if (keywords.coordinacion.some(kw => lower.includes(kw))) {
       }, 500);
     }
 
-    document.getElementById("sendBtn").addEventListener("click", handleSend);
-    document.getElementById("messageInput").addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        handleSend();
-      }
-    });
-
     // Welcome message
     setTimeout(() => {
       const advisors = ["koco bot", "koco"];
@@ -3709,155 +3725,270 @@ if (window.elementSdk) {
 
   </script>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  onAuthStateChanged, 
-  signOut, 
-  setPersistence, 
-  browserSessionPersistence 
-} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    signOut,
+    setPersistence,
+    browserSessionPersistence
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    addDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAA8pgcb4RWWcA7stNmqnrAgfpgTZnlo_c",
-  authDomain: "chat-solidario.firebaseapp.com",
-  projectId: "chat-solidario",
-  storageBucket: "chat-solidario.firebasestorage.app",
-  messagingSenderId: "135166703419",
-  appId: "1:135166703419:web:a68dd015787ee60894a91e"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyAA8pgcb4RWWcA7stNmqnrAgfpgTZnlo_c",
+    authDomain: "chat-solidario.firebaseapp.com",
+    projectId: "chat-solidario",
+    storageBucket: "chat-solidario.firebasestorage.app",
+    messagingSenderId: "135166703419",
+    appId: "1:135166703419:web:a68dd015787ee60894a91e"
+  };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  const ADMINS_PERMITIDOS = new Set([
+    "jdgaan@solidarios.mx",
+    "fernanda@ubemex.edu.mx",
+    "jfpeoj@solidarios.mx"
+  ]);
 
-// FUNCIÓN AUXILIAR DE REGISTRO DENTRO DEL MÓDULO (CORRECTO)
-async function registrarEventoSesion(tipoEvento, usuarioEmail, motivo = "Manual") {
-  try {
-    await addDoc(collection(db, "registros_sesion"), {
-      usuario: usuarioEmail,
-      evento: tipoEvento,
-      motivo: motivo,
-      fecha: serverTimestamp(),
-      navegador: navigator.userAgent,
-      plataforma: navigator.platform
-    });
-    console.log(`Evento '${tipoEvento}' registrado exitosamente.`);
-  } catch (error) {
-    console.error("Error al registrar evento de sesión:", error);
+  const USUARIOS_A_CORREOS = {
+    jdgaan: "jdgaan@solidarios.mx",
+    fernanda: "fernanda@ubemex.edu.mx",
+    jfpeoj: "jfpeoj@solidarios.mx"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const login = document.getElementById("pantalla-login");
+  const contenido = document.getElementById("contenido-pwa");
+  const btnExportar = document.getElementById("btn-exportar-admin");
+  const btnEntrar = document.getElementById("btnEntrar");
+  const btnSalir = document.getElementById("btnSalir");
+  const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPass");
+
+  const TIEMPO_ALERTA = (11 * 60 + 55) * 60 * 1000;
+  const TIEMPO_CIERRE = 12 * 60 * 60 * 1000;
+  let timerAlerta = null;
+  let timerCierre = null;
+  let horaMinimizado = null;
+
+  function correoDeEntrada(valor) {
+    const entrada = (valor || "").trim().toLowerCase();
+    return USUARIOS_A_CORREOS[entrada] || entrada;
   }
-}
 
-let timerAlerta;
-let timerCierre;
-let horaMinimizado = null;
+  function esAdministrador(user) {
+    const correo = user && user.email ? user.email.trim().toLowerCase() : "";
+    return ADMINS_PERMITIDOS.has(correo);
+  }
 
-const TIEMPO_ALERTA = (11 * 60 + 55) * 60 * 1000; 
-const TIEMPO_CIERRE = 12 * 60 * 60 * 1000;         
-	
-function limpiarTemporizadores() {
-  if (timerAlerta) clearTimeout(timerAlerta);
-  if (timerCierre) clearTimeout(timerCierre);
-  horaMinimizado = null;
-}
+  function mostrarExportar(user) {
+    if (!btnExportar) return;
+    btnExportar.style.setProperty(
+      "display",
+      esAdministrador(user) ? "inline-flex" : "none",
+      "important"
+    );
+  }
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.getElementById('pantalla-login').style.display = 'none';
-    document.getElementById('contenido-pwa').style.display = 'block';
-  } else {
-    document.getElementById('pantalla-login').style.display = 'flex';
-    document.getElementById('contenido-pwa').style.display = 'none';
+  async function registrarEventoSesion(evento, usuario, motivo) {
+    try {
+      await addDoc(collection(db, "registros_sesion"), {
+        usuario,
+        evento,
+        motivo,
+        fecha: serverTimestamp(),
+        navegador: navigator.userAgent,
+        plataforma: navigator.platform
+      });
+    } catch (error) {
+      console.error("No se pudo registrar el evento:", error);
+    }
+  }
+
+  function limpiarTemporizadores() {
+    if (timerAlerta) clearTimeout(timerAlerta);
+    if (timerCierre) clearTimeout(timerCierre);
+    timerAlerta = null;
+    timerCierre = null;
+    horaMinimizado = null;
+  }
+
+  function iniciarTemporizadoresInactividad() {
     limpiarTemporizadores();
-  }
-});
+    if (!auth.currentUser) return;
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
     horaMinimizado = Date.now();
-
     timerAlerta = setTimeout(() => {
       if (auth.currentUser) {
-        console.log("SE ALCANZÓ EL TIEMPO LÍMITE DE ESPERA.");
+        alert("TU SESIÓN ESTÁ A PUNTO DE VENCER POR INACTIVIDAD.");
       }
     }, TIEMPO_ALERTA);
 
-    timerCierre = setTimeout(() => {
-      if (auth.currentUser) {
-        const userEmail = auth.currentUser.email;
-        registrarEventoSesion("cierre_sesion", userEmail, "Inactividad 12 horas").then(() => {
-          signOut(auth).then(() => {
-            console.log("SESIÓN CERRADA POR INACTIVIDAD.");
-          });
-        });
-      }
+    timerCierre = setTimeout(async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      await registrarEventoSesion("cierre_sesion", user.email, "Inactividad 12 horas");
+      await signOut(auth);
+      alert("Tu sesión se cerró automáticamente después de 12 horas de inactividad.");
     }, TIEMPO_CIERRE);
-
-  } else if (document.visibilityState === "visible") {
-    if (horaMinimizado && auth.currentUser) {
-      const tiempoInactivo = Date.now() - horaMinimizado;
-
-      if (tiempoInactivo >= TIEMPO_ALERTA && tiempoInactivo < TIEMPO_CIERRE) {
-        limpiarTemporizadores();
-        const deseaContinuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
-        if (!deseaContinuar) {
-          const userEmail = auth.currentUser.email;
-          registrarEventoSesion("cierre_sesion", userEmail, "Cierre por aviso de inactividad").then(() => {
-            signOut(auth).then(() => console.log("SESIÓN CERRADA POR EL USUARIO."));
-          });
-        }
-      } else if (tiempoInactivo < TIEMPO_ALERTA) {
-        limpiarTemporizadores();
-      }
-    }
   }
-});
 
-const btnEntrar = document.getElementById('btnEntrar');
-if (btnEntrar) {
-  btnEntrar.onclick = () => {
-    const email = document.getElementById('loginEmail').value;
-    const pass = document.getElementById('loginPass').value;
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      if (login) login.style.setProperty("display", "none", "important");
+      if (contenido) contenido.style.setProperty("display", "block", "important");
+      mostrarExportar(user);
+    } else {
+      if (login) login.style.setProperty("display", "flex", "important");
+      if (contenido) contenido.style.setProperty("display", "none", "important");
+      mostrarExportar(null);
+      limpiarTemporizadores();
+    }
+  });
 
-    if (!email || !pass) {
-      alert("POR FAVOR COMPLETA LOS CAMPOS");
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      if (auth.currentUser) iniciarTemporizadoresInactividad();
       return;
     }
 
-    setPersistence(auth, browserSessionPersistence)
-      .then(() => {
-        return signInWithEmailAndPassword(auth, email, pass);
-      })
-      .then((userCredential) => {
-        registrarEventoSesion("inicio_sesion", userCredential.user.email, "Inicio manual");
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("ACCESO DENEGADO. VERIFICA TUS CREDENCIALES.");
-      });
-  };
-}
+    if (document.visibilityState === "visible" && horaMinimizado && auth.currentUser) {
+      const tiempoInactivo = Date.now() - horaMinimizado;
 
-const btnSalir = document.getElementById('btnSalir');
-if (btnSalir) {
-  btnSalir.onclick = () => {
-    if (auth.currentUser) {
-      const userEmail = auth.currentUser.email;
-      registrarEventoSesion("cierre_sesion", userEmail, "Boton Salir").then(() => {
-        signOut(auth);
-      });
-    } else {
-      signOut(auth);
+      if (tiempoInactivo >= TIEMPO_CIERRE) {
+        const user = auth.currentUser;
+        limpiarTemporizadores();
+        registrarEventoSesion("cierre_sesion", user.email, "Inactividad 12 horas")
+          .finally(() => signOut(auth));
+        alert("Tu sesión se cerró por 12 horas de inactividad.");
+      } else if (tiempoInactivo >= TIEMPO_ALERTA) {
+        limpiarTemporizadores();
+        const continuar = confirm("TU SESIÓN ESTÁ A PUNTO DE VENCER. ¿DESEAS CONTINUAR EN LA APLICACIÓN?");
+        if (!continuar) {
+          const user = auth.currentUser;
+          registrarEventoSesion("cierre_sesion", user.email, "Cierre por aviso de inactividad")
+            .finally(() => signOut(auth));
+        }
+      } else {
+        limpiarTemporizadores();
+      }
+    }
+  });
+
+  window.iniciarSesionFirebase = async function(event) {
+    if (event) event.preventDefault();
+    const email = correoDeEntrada(emailInput ? emailInput.value : "");
+    const password = passInput ? passInput.value : "";
+
+    if (!email || !password) {
+      alert("Por favor completa usuario y contraseña.");
+      return;
+    }
+
+    if (btnEntrar) {
+      btnEntrar.disabled = true;
+      btnEntrar.textContent = "Validando...";
+    }
+
+    try {
+      await setPersistence(auth, browserSessionPersistence);
+      const credencial = await signInWithEmailAndPassword(auth, email, password);
+      await registrarEventoSesion("inicio_sesion", credencial.user.email, "Inicio manual");
+      mostrarExportar(credencial.user);
+    } catch (error) {
+      console.error("Error de Firebase:", error);
+      alert(`No se pudo iniciar sesión (${error.code || "error"}): ${error.message || "verifica tus datos"}`);
+    } finally {
+      if (btnEntrar) {
+        btnEntrar.disabled = false;
+        btnEntrar.textContent = "Iniciar Sesión";
+      }
     }
   };
-}
+
+  if (btnSalir) {
+    btnSalir.addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (user) await registrarEventoSesion("cierre_sesion", user.email, "Botón Salir");
+      limpiarTemporizadores();
+      await signOut(auth);
+    });
+  }
+
+  window.exportarRegistrosExcel = async function(event) {
+    if (event) event.preventDefault();
+    const user = auth.currentUser;
+
+    if (!user || !esAdministrador(user)) {
+      alert("Acceso denegado: solo los administradores pueden exportar.");
+      return;
+    }
+    if (typeof XLSX === "undefined") {
+      alert("No se cargó Excel. Revisa la conexión a internet.");
+      return;
+    }
+
+    if (btnExportar) {
+      btnExportar.disabled = true;
+      btnExportar.textContent = "Exportando...";
+    }
+
+    try {
+      const resultado = await getDocs(collection(db, "registros_sesion"));
+      const filas = [];
+
+      resultado.forEach((docSnap) => {
+        const data = docSnap.data();
+        let fecha = "Sin fecha";
+        if (data.fecha && typeof data.fecha.toDate === "function") {
+          fecha = data.fecha.toDate().toLocaleString("es-MX");
+        } else if (data.fecha) {
+          fecha = new Date(data.fecha).toLocaleString("es-MX");
+        }
+        filas.push({
+          "Correo": data.usuario || "",
+          "Evento": data.evento || "",
+          "Motivo": data.motivo || "",
+          "Fecha y Hora": fecha
+        });
+      });
+
+      if (!filas.length) {
+        alert("No hay registros de sesión para exportar.");
+        return;
+      }
+
+      const hoja = XLSX.utils.json_to_sheet(filas);
+      hoja["!cols"] = [
+        { wch: 32 },
+        { wch: 20 },
+        { wch: 28 },
+        { wch: 24 }
+      ];
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Bitacora_Sesiones");
+      const fechaArchivo = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(libro, `Registros_Sesion_${fechaArchivo}.xlsx`);
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      alert(`Error al exportar (${error.code || "error"}): ${error.message || "revisa las reglas de Firestore"}`);
+    } finally {
+      if (btnExportar) {
+        btnExportar.disabled = false;
+        btnExportar.innerHTML = "📥 Exportar inicio de sesión";
+      }
+    }
+  };
 </script>
 
 <script>
@@ -3899,11 +4030,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const messageInput = document.getElementById("messageInput");
 
   function ejecutarEnvio() {
-    if (typeof sendMessage === "function") {
-      sendMessage();
-    } else if (typeof enviarMensaje === "function") {
-      enviarMensaje();
-    }
+    if (typeof handleSend === "function") handleSend();
   }
 
   if (sendBtn) {
